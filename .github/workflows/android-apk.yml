@@ -1,30 +1,54 @@
+
 name: Build Android APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
+    name: Build APK
     runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.3
 
     steps:
-      - name: Projeyi indir
+      - name: Download project
         uses: actions/checkout@v4
 
-      - name: Godot kur
-        uses: chickensoft-games/setup-godot@v2
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
-          version: 4.3.0
-          use-dotnet: false
+          distribution: temurin
+          java-version: '17'
 
-      - name: Android APK oluştur
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Prepare Godot export templates
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates
+          if [ -d /root/.local/share/godot/export_templates ]; then
+            cp -r /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/
+          fi
+
+      - name: Import project
+        run: godot --headless --editor --path . --quit
+
+      - name: Export APK
         run: |
           mkdir -p build
-          godot --headless --editor --path . --quit
-          godot --headless --path . --export-debug "Android" build/HorrorBuyukanne.apk
+          PRESET=$(sed -n '/^\[preset\.0\]/,/^\[preset\./p' export_presets.cfg | sed -n 's/^name="\([^"]*\)"/\1/p' | head -n 1)
+          if [ -z "$PRESET" ]; then
+            echo "Android export preset not found in export_presets.cfg"
+            exit 1
+          fi
+          godot --headless --path . --export-debug "$PRESET" build/Horror-Buyukanne.apk
 
-      - name: APK dosyasını sakla
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: HorrorBuyukanne-APK
-          path: build/HorrorBuyukanne.apk
+          name: Horror-Buyukanne-APK
+          path: build/Horror-Buyukanne.apk
