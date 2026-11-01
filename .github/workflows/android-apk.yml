@@ -1,0 +1,30 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Projeyi indir
+        uses: actions/checkout@v4
+
+      - name: Godot kur
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.3.0
+          use-dotnet: false
+
+      - name: Android APK oluştur
+        run: |
+          mkdir -p build
+          godot --headless --editor --path . --quit
+          godot --headless --path . --export-debug "Android" build/HorrorBuyukanne.apk
+
+      - name: APK dosyasını sakla
+        uses: actions/upload-artifact@v4
+        with:
+          name: HorrorBuyukanne-APK
+          path: build/HorrorBuyukanne.apk
